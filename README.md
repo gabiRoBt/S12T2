@@ -6,7 +6,7 @@ Un sistem complex de automatizare bazat pe Playwright si Discord pentru gestiona
 
 * Suport Multi-Platforma: Automatizeaza conversatiile atat pe Facebook, cat si pe Instagram.
 * Orchestrare prin Discord: Controleaza intregul sistem direct din Discord prin comenzi tip Slash (/) si preia tintele (ID-urile) din canale dedicate.
-* Comportament Uman Simulat (Anti-Bot): 
+* Comportament Uman Simulat (Anti-Bot):
   * Include delay-uri realiste de citire si scriere (tastare litera cu litera).
   * Simuleaza miscari naturale ale mouse-ului si scroll.
   * Respecta un program zilnic (ex: nu raspunde noaptea, raspunde mai greu dimineata, este foarte activ seara).
@@ -16,6 +16,7 @@ Un sistem complex de automatizare bazat pe Playwright si Discord pentru gestiona
 
 ## Structura Proiectului
 
+```
 chatbot-automation/
 ├── main.py            # Entry point-ul aplicatiei; gestioneaza inchiderea gratioasa
 ├── bot.py             # Logica de Discord (evenimente, comenzi slash, sistem de demo)
@@ -28,60 +29,73 @@ chatbot-automation/
 ├── config.py          # Incarcarea variabilelor de mediu din .env
 ├── requirements.txt   # Dependentele proiectului
 └── .env.example       # Exemplu de configurare
+```
 
 ## Instalare si Configurare
 
 1. Instaleaza dependentele:
-   pip install -r requirements.txt
+```bash
+pip install -r requirements.txt
+```
 
 2. Instaleaza browserele pentru Playwright:
-   playwright install chromium
+```bash
+playwright install chromium
+```
 
 3. Configureaza variabilele de mediu:
-   Copiaza fisierul de exemplu si completeaza-l cu datele tale reale:
-   cp .env.example .env
-   
-   *Asigura-te ca ai completat token-ul Discord, cheia API Cohere (folosind modelul command-r-plus sau similar) si credentialele pentru FB/IG*.
+```bash
+cp .env.example .env
+```
+Asigura-te ca ai completat token-ul Discord, cheia API Cohere si credentialele pentru FB/IG.
 
 ## Rulare
 
-Porneste aplicatia executand fisierul principal:
+```bash
 python main.py
+```
 
 ## Configurare Discord
 
 ### 1. Canale Necesare
+
 Botul citeste ID-urile conturilor tinta din canale specifice. Trebuie sa ai urmatoarele canale in serverul tau de Discord (numele pot fi modificate din .env):
-* facebook-ids - Pentru tintele de Facebook Messenger.
-* instagram-ids - Pentru tintele de Instagram Direct.
+
+* `facebook-ids` - Pentru tintele de Facebook Messenger.
+* `instagram-ids` - Pentru tintele de Instagram Direct.
 
 ### 2. Formatul Tintelor in Canale
-Adauga un ID pe linie, urmat optional de personalitatea dorita, separate prin |. Liniile care incep cu # sunt ignorate.
 
+Adauga un ID pe linie, urmat optional de personalitatea dorita, separate prin `|`. Liniile care incep cu `#` sunt ignorate.
+
+```
 987654321 | amic
 123456789 | iubita
 111222333 | englez_stalcit
 444555666              # Foloseste personalitatea default (iubita)
+```
 
 ## Comenzi Discord Disponibile
 
-Botul foloseste Slash Commands. Tasteaza / in Discord pentru a le vedea:
-
-/run - Porneste fluxul normal de procesare pentru toate ID-urile din canale. Respecta programul uman (poate amana raspunsurile cu orele).
-/alwaysonline - Porneste botul ignorand programul de somn/activitate. Va raspunde tuturor conturilor in sub 1 minut.
-/test <platform> <id> [personalitate] - Ruleaza botul strict pentru un singur cont specificat. Util pentru debugging.
-/personalitati - Afiseaza o lista cu toate personalitatile definite in cod.
-/demo [personalitate] - Porneste o sesiune de test direct in DM cu botul pe Discord, simuland o conversatie. Salveaza profilul extras in DB.
-/stoptdemo - Opreste sesiunea activa de demo din DM.
+| Comanda | Descriere |
+|---|---|
+| `/run` | Porneste fluxul normal de procesare pentru toate ID-urile din canale. Respecta programul uman. |
+| `/alwaysonline` | Porneste botul ignorand programul de somn/activitate. Va raspunde in sub 1 minut. |
+| `/test <platform> <id> [personalitate]` | Ruleaza botul strict pentru un singur cont. Util pentru debugging. |
+| `/personalitati` | Afiseaza o lista cu toate personalitatile definite in cod. |
+| `/demo [personalitate]` | Porneste o sesiune de test direct in DM cu botul pe Discord. |
+| `/stoptdemo` | Opreste sesiunea activa de demo din DM. |
 
 ## Adaugare Personalitate Noua
 
-Pentru a adauga o personalitate noua, editeaza fisierul personalities.py si adauga o intrare noua in dictionarul PERSONALITIES:
+Editeaza `personalities.py` si adauga o intrare noua in dictionarul `PERSONALITIES`:
 
+```python
 "antrenor": {
     "name": "Antrenor de Fitness",
     "prompt": "Esti un antrenor de fitness foarte motivat. Folosesti expresii precum 'Hai trage!', 'Fara scuze!'. Raspunzi la mesaje scurt si la obiect, punand accent pe disciplina."
 }
+```
 
 ## Disclaimer
 
