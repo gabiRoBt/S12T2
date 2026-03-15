@@ -1,6 +1,7 @@
 import asyncio
 from browser import BrowserSession
-from cohere_client import generate_reply
+from cohere_client import generate_reply, extract_profile_data
+from profile_db import get_profile, update_profile, profile_to_context
 from config import FB_EMAIL, FB_PASSWORD, IG_USERNAME, IG_PASSWORD
 
 
@@ -33,8 +34,10 @@ async def _process_account(session: BrowserSession, account: dict) -> dict:
     """
     Process a single account:
     1. Read conversation
-    2. Generate reply via Cohere
-    3. Send reply
+    2. Load profile from DB + inject as context
+    3. Generate reply via Cohere
+    4. Send reply
+    5. Extract new profile info and save to DB
     """
     platform = account["platform"].lower()
     account_id = account["id"]
@@ -62,17 +65,33 @@ async def _process_account(session: BrowserSession, account: dict) -> dict:
             result["detail"] = "Ultimul mesaj este al nostru, asteptam raspuns."
             return result
 
-        # 2. Generate reply
-        reply = await generate_reply(history, personality_key=personality)
+        # 2. Load profile and build context string
+        profile = get_profile(account_id, platform)
+        profile_context = profile_to_context(profile)
+        if profile_context:
+            print(f"[RUNNER] Profile loaded for {account_id}: {list(profile.keys())}")
+
+        # 3. Generate reply with profile context injected
+        reply = await generate_reply(
+            history,
+            personality_key=personality,
+            profile_context=profile_context,
+        )
         if not reply:
             result["detail"] = "Cohere nu a returnat un raspuns."
             return result
 
-        # 3. Send reply
+        # 4. Send reply
         if platform == "facebook":
             await session.send_facebook_message(account_id, reply)
         elif platform == "instagram":
             await session.send_instagram_message(account_id, reply)
+
+        # 5. Extract new profile data from conversation and save
+        new_data = await extract_profile_data(history)
+        if new_data:
+            update_profile(account_id, platform, new_data)
+            print(f"[RUNNER] Profile updated for {account_id}: {new_data}")
 
         result["success"] = True
         result["detail"] = f"Trimis: {reply[:60]}..."

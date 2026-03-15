@@ -31,6 +31,7 @@
     <Compile Include="config.py" />
     <Compile Include="main.py" />
     <Compile Include="personalities.py" />
+    <Compile Include="profile_db.py" />
     <Compile Include="runner.py" />
   </ItemGroup>
   <ItemGroup>

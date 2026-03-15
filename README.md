@@ -1,4 +1,4 @@
-# chatbot-automation
+# S12T2
 
 Discord bot + Playwright automation pentru gestionarea conversatiilor de Facebook si Instagram cu personalitati AI prin Cohere.
 
@@ -44,10 +44,10 @@ python main.py
 ## Format ID-uri in canale
 
 ```
+987654321 | amic
 123456789 | iubita
-987654321 | coleg
 111222333 | englez_stalcit
-444555666              # foloseste personalitatea default (iubita)
+444555666              # foloseste personalitatea default (amic)
 ```
 
 ## Comenzi Discord
@@ -58,19 +58,18 @@ python main.py
 | `/test platform id personality` | Testeaza un singur cont |
 | `/personalitati` | Afiseaza personalitati disponibile |
 
-## Personalitati
-
-- `iubita` - Iubita afectuoasa, termeni de alint, emoji-uri
-- `coleg` - Coleg de munca casual, jargon de birou
-- `englez_stalcit` - Roman care stalceste engleza comic
 
 ## Adaugare personalitate noua
 
 In `personalities.py`, adauga un nou bloc in dictionar:
 
 ```python
-"prietena_buna": {
-    "name": "Prietena buna",
-    "prompt": "Esti o prietena buna care..."
+"coleg_de_munca": {
+    "name": "Coleg",
+    "prompt": "Esti un coleg care..."
 }
 ```
+
+## Disclaimer
+
+Acest proiect este realizat exclusiv in scop de divertisment. Nu trebuie luat in serios si nu trebuie sa inlocuiasca interactiunile umane.
