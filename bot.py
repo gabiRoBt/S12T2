@@ -1,4 +1,4 @@
-import discord
+﻿import discord
 from discord.ext import commands
 from discord import app_commands
 
@@ -8,8 +8,10 @@ from config import (
     CHANNEL_FACEBOOK_IDS,
     CHANNEL_INSTAGRAM_IDS,
 )
-from personalities import list_personalities
+from personalities import list_personalities, get_personality
 from runner import run_all_accounts
+from cohere_client import generate_reply, extract_profile_data
+from profile_db import get_profile, update_profile, profile_to_context, init_db
 
 
 # ---------------------------------------------------------------------------
@@ -19,8 +21,12 @@ from runner import run_all_accounts
 intents = discord.Intents.default()
 intents.message_content = True
 
-bot = commands.Bot(command_prefix="/", intents=intents)
+bot = commands.Bot(command_prefix="!", intents=intents)
 guild = discord.Object(id=DISCORD_GUILD_ID)
+
+# demo_sessions stores active demo conversations per user
+# { user_id: { "personality": str, "history": [...] } }
+demo_sessions: dict[int, dict] = {}
 
 
 # ---------------------------------------------------------------------------
@@ -28,15 +34,6 @@ guild = discord.Object(id=DISCORD_GUILD_ID)
 # ---------------------------------------------------------------------------
 
 async def read_ids_from_channel(guild_obj: discord.Guild, channel_name: str) -> list[dict]:
-    """
-    Read account entries from a Discord channel.
-
-    Expected format per line:
-        <id> | <personality>
-        <id>               <- uses default personality
-
-    Returns list of dicts: {"id": "...", "platform": "...", "personality": "..."}
-    """
     channel = discord.utils.get(guild_obj.text_channels, name=channel_name)
     if not channel:
         return []
@@ -67,8 +64,59 @@ async def read_ids_from_channel(guild_obj: discord.Guild, channel_name: str) -> 
 
 @bot.event
 async def on_ready():
+    init_db()
     await bot.tree.sync(guild=guild)
     print(f"[BOT] Logged in as {bot.user} | Guild: {DISCORD_GUILD_ID}")
+
+
+@bot.event
+async def on_message(message: discord.Message):
+    # Ignore messages from the bot itself
+    if message.author == bot.user:
+        return
+
+    # Only handle DMs
+    if not isinstance(message.channel, discord.DMChannel):
+        await bot.process_commands(message)
+        return
+
+    user_id = message.author.id
+
+    # Check if this user has an active demo session
+    if user_id not in demo_sessions:
+        await bot.process_commands(message)
+        return
+
+    session = demo_sessions[user_id]
+    personality = session["personality"]
+    history = session["history"]
+
+    # Add user message to history
+    history.append({"role": "USER", "message": message.content})
+
+    # Load profile for demo user
+    profile = get_profile(f"demo_{user_id}", "demo")
+    profile_context = profile_to_context(profile)
+
+    async with message.channel.typing():
+        reply = await generate_reply(
+            history,
+            personality_key=personality,
+            profile_context=profile_context,
+        )
+
+        # Extract and save profile info
+        new_data = await extract_profile_data(history)
+        if new_data:
+            update_profile(f"demo_{user_id}", "demo", new_data)
+
+    if reply:
+        history.append({"role": "CHATBOT", "message": reply})
+        await message.channel.send(reply)
+    else:
+        await message.channel.send("*(eroare la generarea raspunsului)*")
+
+    await bot.process_commands(message)
 
 
 # ---------------------------------------------------------------------------
@@ -122,9 +170,7 @@ async def personalitati_command(interaction: discord.Interaction):
     lines = ["**Personalitati disponibile:**"]
     for name in names:
         lines.append(f"- `{name}`")
-    lines.append(
-        "\nFoloseste formatul `<id> | <personalitate>` in canale."
-    )
+    lines.append("\nFoloseste formatul `<id> | <personalitate>` in canale.")
     await interaction.response.send_message("\n".join(lines))
 
 
@@ -154,6 +200,100 @@ async def test_command(
     await interaction.followup.send(
         f"[{platform.upper()}] `{account_id}` | _{personality}_ -> **{status}**: {r['detail']}"
     )
+
+
+@bot.tree.command(
+    name="alwaysonline",
+    description="Ruleaza botul in mod always online - raspunde in sub 1 minut.",
+    guild=guild,
+)
+async def alwaysonline_command(interaction: discord.Interaction):
+    await interaction.response.defer(thinking=True)
+
+    guild_obj = bot.get_guild(DISCORD_GUILD_ID)
+    fb_accounts = await read_ids_from_channel(guild_obj, CHANNEL_FACEBOOK_IDS)
+    ig_accounts = await read_ids_from_channel(guild_obj, CHANNEL_INSTAGRAM_IDS)
+    all_accounts = fb_accounts + ig_accounts
+
+    if not all_accounts:
+        await interaction.followup.send(
+            "Nu am gasit niciun cont in canale. "
+            f"Adauga ID-uri in `#{CHANNEL_FACEBOOK_IDS}` sau `#{CHANNEL_INSTAGRAM_IDS}`."
+        )
+        return
+
+    summary_lines = [f"**[ALWAYS ONLINE] Conturi gasite:** {len(all_accounts)}"]
+    for acc in all_accounts:
+        summary_lines.append(f"- [{acc['platform'].upper()}] `{acc['id']}` | _{acc['personality']}_")
+
+    summary_lines.append("Mod always online activ - raspund in sub 1 minut...")
+    await interaction.followup.send("".join(summary_lines))
+
+    results = await run_all_accounts(all_accounts, always_online=True)
+
+    result_lines = ["**Rezultate:**"]
+    for r in results:
+        status = "OK" if r["success"] else "EROARE"
+        result_lines.append(f"- `{r['id']}` [{r['platform']}] -> {status}: {r['detail']}")
+
+    await interaction.followup.send("".join(result_lines))
+
+
+@bot.tree.command(
+    name="demo",
+    description="Porneste o conversatie de test in DM cu botul.",
+    guild=guild,
+)
+@app_commands.describe(
+    personality="Personalitatea de folosit (default: iubita)",
+)
+async def demo_command(
+    interaction: discord.Interaction,
+    personality: str = "iubita",
+):
+    user_id = interaction.user.id
+    p = get_personality(personality)
+
+    # Start or reset session
+    demo_sessions[user_id] = {
+        "personality": personality,
+        "history": [],
+    }
+
+    await interaction.response.send_message(
+        f"Sesiune demo pornita cu personalitatea **{p['name']}**.\n"
+        f"Ti-am trimis un DM — scrie acolo pentru a conversa.\n"
+        f"Foloseste `/stopdemo` pentru a opri.",
+        ephemeral=True,
+    )
+
+    # Send opening message in DM
+    dm = await interaction.user.create_dm()
+    await dm.send(
+        f"Salut! Sunt **{p['name']}**. Scrie-mi orice, sunt aici! 👋\n"
+        f"*(demo activ — `/stoptdemo` pentru a opri)*"
+    )
+
+
+@bot.tree.command(
+    name="stoptdemo",
+    description="Opreste sesiunea demo activa.",
+    guild=guild,
+)
+async def stopdemo_command(interaction: discord.Interaction):
+    user_id = interaction.user.id
+
+    if user_id in demo_sessions:
+        demo_sessions.pop(user_id)
+        await interaction.response.send_message(
+            "Sesiune demo oprita. Profilul tau de test a fost salvat in DB.",
+            ephemeral=True,
+        )
+    else:
+        await interaction.response.send_message(
+            "Nu ai nicio sesiune demo activa.",
+            ephemeral=True,
+        )
 
 
 # ---------------------------------------------------------------------------

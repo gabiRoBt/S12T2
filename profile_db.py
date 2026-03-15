@@ -6,8 +6,12 @@ DB_PATH = os.path.join(os.path.dirname(__file__), "profiles.db")
 
 
 def _get_conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
+    # WAL mode: allows simultaneous reads during writes, no blocking
+    conn.execute("PRAGMA journal_mode=WAL")
+    # If DB is locked, retry for up to 10 seconds instead of crashing
+    conn.execute("PRAGMA busy_timeout=10000")
     return conn
 
 

@@ -21,10 +21,14 @@
   <ItemGroup>
     <Content Include=".env" />
     <Content Include=".env.example" />
+    <Content Include=".gitignore" />
+    <Content Include="profiles.db" />
     <Content Include="README.md" />
     <Content Include="requirements.txt" />
+    <Content Include="session_ig.json" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="activity.py" />
     <Compile Include="bot.py" />
     <Compile Include="browser.py" />
     <Compile Include="cohere_client.py" />
