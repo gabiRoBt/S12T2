@@ -2,29 +2,29 @@ import json
 import httpx
 from config import COHERE_API_KEY, COHERE_MODEL
 from personalities import get_personality
-
+from logger import log
 
 COHERE_URL = "https://api.cohere.ai/v1/chat"
 
 EXTRACT_PROMPT = """
-Esti un sistem de extragere a informatiilor. 
-Analizeaza conversatia de mai jos si extrage DOAR informatiile pe care persoana (USER) le-a mentionat explicit despre ea insasi.
-Returneaza DOAR un JSON valid, fara text suplimentar, fara markdown, fara explicatii.
+You are an information extraction system.
+Analyze the conversation below and extract ONLY information the USER explicitly mentioned about themselves.
+Return ONLY valid JSON, no extra text, no markdown, no explanations.
 
-Campuri posibile (include-le doar daca sunt mentionate explicit):
-- nume
-- varsta
-- oras
+Possible fields (include only if explicitly mentioned):
+- nume (name)
+- varsta (age)
+- oras (city)
 - job
-- relatii (are iubit/iubita, casatorit, singur etc.)
-- interese (hobby-uri, pasiuni)
-- familie (frati, parinti, copii)
-- stare (cum se simte emotional)
+- relatii (relationship status)
+- interese (hobbies, interests)
+- familie (family members)
+- stare (emotional state)
 
-Daca nu gasesti nicio informatie noua, returneaza: {}
+If no new information found, return: {}
 
-Exemplu output valid:
-{"nume": "Andrei", "oras": "Cluj", "job": "programator"}
+Example valid output:
+{"nume": "Andrei", "oras": "Cluj", "job": "programmer"}
 """
 
 
@@ -33,16 +33,9 @@ async def generate_reply(
     personality_key: str = "iubita",
     profile_context: str = "",
 ) -> str:
-    """
-    Send conversation history to Cohere and get a reply.
-
-    conversation_history format:
-        [{"role": "USER", "message": "..."}, {"role": "CHATBOT", "message": "..."}, ...]
-    """
     personality = get_personality(personality_key)
     system_prompt = personality["prompt"]
 
-    # Inject profile context into preamble if available
     if profile_context:
         system_prompt = f"{system_prompt}\n\n{profile_context}"
 
@@ -73,23 +66,18 @@ async def generate_reply(
 
 
 async def extract_profile_data(conversation_history: list[dict]) -> dict:
-    """
-    Send conversation to Cohere and extract profile information.
-    Returns a dict with any found fields, or empty dict if nothing found.
-    """
     if not conversation_history:
         return {}
 
-    # Format conversation as plain text for extraction
     convo_text = "\n".join(
         [f"{msg['role']}: {msg['message']}" for msg in conversation_history]
     )
 
     payload = {
         "model": COHERE_MODEL,
-        "message": f"Conversatie:\n{convo_text}",
+        "message": f"Conversation:\n{convo_text}",
         "preamble": EXTRACT_PROMPT,
-        "temperature": 0.1,  # Low temperature for consistent JSON output
+        "temperature": 0.1,
     }
 
     headers = {
@@ -104,14 +92,11 @@ async def extract_profile_data(conversation_history: list[dict]) -> dict:
             data = response.json()
             raw = data.get("text", "").strip()
 
-        # Clean up in case model adds markdown fences
         raw = raw.replace("```json", "").replace("```", "").strip()
-
         extracted = json.loads(raw)
         if isinstance(extracted, dict):
             return extracted
-
     except Exception as e:
-        print(f"[COHERE] Profile extraction failed: {e}")
+        log.warning(f"[COHERE] Profile extraction failed: {e}")
 
     return {}

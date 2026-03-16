@@ -15,4 +15,5 @@ ENV/
 .DS_Store
 Thumbs.db
 session_ig.json
+session_fb.json
 logs/

@@ -5,7 +5,8 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{b486d31a-9b39-4d9f-8d48-058772bdf9ae}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>main.py</StartupFile>
+    <StartupFile>
+    </StartupFile>
     <SearchPath />
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -26,22 +27,37 @@
     <Content Include="profiles.db" />
     <Content Include="README.md" />
     <Content Include="requirements.txt" />
+    <Content Include="session_fb.json" />
     <Content Include="session_ig.json" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="activity.py" />
-    <Compile Include="bot.py" />
-    <Compile Include="browser.py" />
-    <Compile Include="cohere_client.py" />
+    <Compile Include="bot\channel_reader.py" />
+    <Compile Include="bot\commands.py" />
+    <Compile Include="bot\demo.py" />
+    <Compile Include="bot\__init__.py" />
+    <Compile Include="browser\actions.py" />
+    <Compile Include="browser\facebook.py" />
+    <Compile Include="browser\instagram.py" />
+    <Compile Include="browser\popups.py" />
+    <Compile Include="browser\session.py" />
+    <Compile Include="browser\__init__.py" />
     <Compile Include="config.py" />
+    <Compile Include="core\activity.py" />
+    <Compile Include="core\cohere_client.py" />
+    <Compile Include="core\profile_db.py" />
+    <Compile Include="core\runner.py" />
+    <Compile Include="core\__init__.py" />
     <Compile Include="logger.py" />
     <Compile Include="main.py" />
     <Compile Include="personalities.py" />
-    <Compile Include="profile_db.py" />
-    <Compile Include="runner.py" />
   </ItemGroup>
   <ItemGroup>
     <InterpreterReference Include="Global|PythonCore|3.14" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="bot\" />
+    <Folder Include="browser\" />
+    <Folder Include="core\" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
 </Project>
