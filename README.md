@@ -17,18 +17,33 @@ Un sistem complex de automatizare bazat pe Playwright si Discord pentru gestiona
 ## Structura Proiectului
 
 ```
-chatbot-automation/
-├── main.py            # Entry point-ul aplicatiei; gestioneaza inchiderea gratioasa
-├── bot.py             # Logica de Discord (evenimente, comenzi slash, sistem de demo)
-├── runner.py          # Orchestrarea fluxului (verificare program -> citire -> cohere -> trimitere)
-├── browser.py         # Automatizarea Playwright (login, bypass cookie-uri/popup-uri, interactiune DOM)
-├── cohere_client.py   # Integrarea cu API-ul Cohere (generare mesaje si extragere date profil)
-├── profile_db.py      # Gestionarea bazei de date SQLite (memoria botului)
-├── activity.py        # Logica pentru simularea programului uman si a delay-urilor
-├── personalities.py   # Dictionarul cu personalitatile AI disponibile
-├── config.py          # Incarcarea variabilelor de mediu din .env
-├── requirements.txt   # Dependentele proiectului
-└── .env.example       # Exemplu de configurare
+S12T2/
+├── main.py                # Entry point-ul aplicatiei; gestioneaza inchiderea gratioasa a botului
+├── bot/                   # Logica de Discord (evenimente, comenzi slash, sistem de demo, citire canale)
+│   ├── __init__.py        # Initializarea si setarea botului de Discord
+│   ├── channel_reader.py  # Functii pentru citirea ID-urilor tinta din canalele de Discord
+│   ├── commands.py        # Definirea si inregistrarea comenzilor Slash (/run, /test, /demo etc.)
+│   └── demo.py            # Logica pentru gestionarea conversatiilor de test in DM
+├── core/                  # Orchestrarea fluxului (verificare program, cohere, update db, runner)
+│   ├── __init__.py        # Expunerea functiilor principale din modul
+│   ├── activity.py        # Logica pentru simularea programului zilnic si delay-urilor umane
+│   ├── cohere_client.py   # Functii pentru interogarea API-ului Cohere (generare raspunsuri si extragere profil)
+│   ├── profile_db.py      # Baza de date SQLite pentru memoria/profilul utilizatorilor contactati
+│   └── runner.py          # Bucla de orchestrare: citire conversatie -> generare raspuns -> trimitere
+├── browser/               # Automatizarea Playwright (login, bypass cookie-uri/popup-uri, interactiune DOM)
+│   ├── __init__.py        # Expunerea claselor de browser
+│   ├── actions.py         # Functii pentru simularea actiunilor umane (scroll, miscare mouse, typing delay)
+│   ├── facebook.py        # Logica specifica de automatizare pentru platforma Facebook Messenger
+│   ├── instagram.py       # Logica specifica de automatizare pentru platforma Instagram Direct
+│   ├── popups.py          # Functii destinate inchiderii dialogurilor (cookies, conectare, PIN e2ee)
+│   └── session.py         # Gestionarea instantelor si contextelor de Chromium (salvare/incarcare sesiune)
+├── logger.py              # Sistemul de logging pentru consola si fisiere locale
+├── personalities.py       # Dictionarul cu personalitatile AI disponibile (prompturile sistemului)
+├── config.py              # Incarcarea variabilelor de mediu din fisierele .env
+├── requirements.txt       # Dependentele proiectului (ex: discord.py, playwright, httpx, cohere etc.)
+├── .env.example           # Exemplu de configurare a variabilelor de mediu
+├── .gitignore             # Specificarea fisierelor ignorate de Git (sesiuni, log-uri, venv)
+└── README.md              # Documentatia proiectului cu instructiuni de instalare si folosire
 ```
 
 ## Instalare si Configurare
@@ -47,7 +62,7 @@ playwright install chromium
 ```bash
 cp .env.example .env
 ```
-Asigura-te ca ai completat token-ul Discord, cheia API Cohere si credentialele pentru FB/IG.
+Asigura-te ca ai completat token-ul Discord, cheia API Cohere si credentialele pentru conturile de Facebook si Instagram.
 
 ## Rulare
 
@@ -84,11 +99,11 @@ Adauga un ID pe linie, urmat optional de personalitatea dorita, separate prin `|
 | `/test <platform> <id> [personalitate]` | Ruleaza botul strict pentru un singur cont. Util pentru debugging. |
 | `/personalitati` | Afiseaza o lista cu toate personalitatile definite in cod. |
 | `/demo [personalitate]` | Porneste o sesiune de test direct in DM cu botul pe Discord. |
-| `/stoptdemo` | Opreste sesiunea activa de demo din DM. |
+| `/stopdemo` | Opreste sesiunea activa de demo din DM. |
 
 ## Adaugare Personalitate Noua
 
-Editeaza `personalities.py` si adauga o intrare noua in dictionarul `PERSONALITIES`:
+Editeaza fisierul `personalities.py` si adauga o intrare noua in dictionarul `PERSONALITIES`:
 
 ```python
 "antrenor": {
