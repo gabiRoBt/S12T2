@@ -1,3 +1,4 @@
+from logger import log
 import asyncio
 import random
 from browser import BrowserSession
@@ -19,22 +20,22 @@ async def _get_session(platform: str = "facebook") -> BrowserSession:
     if platform == "facebook" and _session.fb_context is None:
         if FB_EMAIL and FB_PASSWORD:
             try:
-                print("[RUNNER] Pornesc sesiunea Facebook...")
+                log.info("[RUNNER] Pornesc sesiunea Facebook...")
                 await _session.login_facebook()
             except Exception as e:
-                print(f"[RUNNER] Facebook login failed: {e}")
+                log.info(f"[RUNNER] Facebook login failed: {e}")
         else:
-            print("[RUNNER] FB_EMAIL sau FB_PASSWORD lipsa din .env, skip Facebook.")
+            log.info("[RUNNER] FB_EMAIL sau FB_PASSWORD lipsa din .env, skip Facebook.")
 
     elif platform == "instagram" and _session.ig_context is None:
         if IG_USERNAME and IG_PASSWORD:
             try:
-                print("[RUNNER] Pornesc sesiunea Instagram...")
+                log.info("[RUNNER] Pornesc sesiunea Instagram...")
                 await _session.login_instagram()
             except Exception as e:
-                print(f"[RUNNER] Instagram login failed: {e}")
+                log.info(f"[RUNNER] Instagram login failed: {e}")
         else:
-            print("[RUNNER] IG_USERNAME sau IG_PASSWORD lipsa din .env, skip Instagram.")
+            log.info("[RUNNER] IG_USERNAME sau IG_PASSWORD lipsa din .env, skip Instagram.")
 
     return _session
 
@@ -49,13 +50,13 @@ async def _process_account(current_session: BrowserSession, account: dict, alway
     try:
         # 1. Check activity schedule
         if not should_respond(always_online=always_online):
-            print(f"[RUNNER] {account_id} - in afara programului, skip.")
+            log.info(f"[RUNNER] {account_id} - in afara programului, skip.")
             result["success"] = True
             result["detail"] = "In afara programului de activitate, skip."
             return result
 
         # 2. Read conversation
-        print(f"[RUNNER] {account_id} - citesc conversatia...")
+        log.info(f"[RUNNER] {account_id} - citesc conversatia...")
         if platform == "facebook":
             history = await current_session.get_facebook_conversation(account_id)
         elif platform == "instagram":
@@ -65,12 +66,12 @@ async def _process_account(current_session: BrowserSession, account: dict, alway
             return result
 
         if not history:
-            print(f"[RUNNER] {account_id} - niciun mesaj gasit.")
+            log.info(f"[RUNNER] {account_id} - niciun mesaj gasit.")
             result["detail"] = "Nu am gasit mesaje in conversatie."
             return result
 
         if history[-1]["role"] == "CHATBOT":
-            print(f"[RUNNER] {account_id} - ultimul mesaj e al nostru, asteptam raspuns.")
+            log.info(f"[RUNNER] {account_id} - ultimul mesaj e al nostru, asteptam raspuns.")
             result["success"] = True
             result["detail"] = "Ultimul mesaj este al nostru, asteptam raspuns."
             return result
@@ -79,15 +80,15 @@ async def _process_account(current_session: BrowserSession, account: dict, alway
         profile = get_profile(account_id, platform)
         profile_context = profile_to_context(profile)
         if profile_context:
-            print(f"[RUNNER] {account_id} - profil incarcat: {list(profile.keys())}")
+            log.info(f"[RUNNER] {account_id} - profil incarcat: {list(profile.keys())}")
 
         # 4. Wait before responding
         last_incoming = history[-1]["message"]
-        print(f"[RUNNER] {account_id} - mesaj primit: \"{last_incoming[:50]}\"")
+        log.info(f"[RUNNER] {account_id} - mesaj primit: \"{last_incoming[:50]}\"")
         await activity_delay(always_online=always_online)
 
         # 5. Generate reply
-        print(f"[RUNNER] {account_id} - generez raspunsul...")
+        log.info(f"[RUNNER] {account_id} - generez raspunsul...")
         reply = await generate_reply(
             history,
             personality_key=personality,
@@ -97,7 +98,7 @@ async def _process_account(current_session: BrowserSession, account: dict, alway
             result["detail"] = "Cohere nu a returnat un raspuns."
             return result
 
-        print(f"[RUNNER] {account_id} - trimit: \"{reply[:60]}\"")
+        log.info(f"[RUNNER] {account_id} - trimit: \"{reply[:60]}\"")
 
         # 6. Send reply
         if platform == "facebook":
@@ -105,19 +106,19 @@ async def _process_account(current_session: BrowserSession, account: dict, alway
         elif platform == "instagram":
             await current_session.send_instagram_message(account_id, reply, last_incoming=last_incoming)
 
-        print(f"[RUNNER] {account_id} - mesaj trimis cu succes.")
+        log.info(f"[RUNNER] {account_id} - mesaj trimis cu succes.")
 
         # 7. Extract and save profile data
         new_data = await extract_profile_data(history)
         if new_data:
             update_profile(account_id, platform, new_data)
-            print(f"[RUNNER] {account_id} - profil actualizat: {new_data}")
+            log.info(f"[RUNNER] {account_id} - profil actualizat: {new_data}")
 
         result["success"] = True
         result["detail"] = f"Trimis: {reply[:60]}..."
 
     except Exception as e:
-        print(f"[RUNNER] {account_id} - eroare: {e}")
+        log.info(f"[RUNNER] {account_id} - eroare: {e}")
         result["detail"] = str(e)
 
     return result
@@ -127,16 +128,16 @@ async def run_all_accounts(accounts: list[dict], always_online: bool = False) ->
     results = []
 
     mode = "ALWAYS ONLINE" if always_online else "NORMAL"
-    print(f"[RUNNER] Pornesc procesarea a {len(accounts)} conturi - mod {mode}")
+    log.info(f"[RUNNER] Pornesc procesarea a {len(accounts)} conturi - mod {mode}")
 
     for account in accounts:
-        print(f"\n[RUNNER] --- {account['platform'].upper()} | {account['id']} | {account.get('personality')} ---")
+        log.info(f"[RUNNER] --- {account['platform'].upper()} | {account['id']} | {account.get('personality')} ---")
         current_session = await _get_session(platform=account["platform"])
         result = await _process_account(current_session, account, always_online=always_online)
         results.append(result)
         await asyncio.sleep(random.uniform(3, 8))
 
-    print(f"\n[RUNNER] Procesare completa.")
+    log.info(f"[RUNNER] Procesare completa.")
     return results
 
 

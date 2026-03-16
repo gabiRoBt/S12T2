@@ -1,4 +1,5 @@
-﻿import discord
+﻿from logger import log
+import discord
 from discord.ext import commands
 from discord import app_commands
 
@@ -66,7 +67,7 @@ async def read_ids_from_channel(guild_obj: discord.Guild, channel_name: str) -> 
 async def on_ready():
     init_db()
     await bot.tree.sync(guild=guild)
-    print(f"[BOT] Logged in as {bot.user} | Guild: {DISCORD_GUILD_ID}")
+    log.info(f"[BOT] Logged in as {bot.user} | Guild: {DISCORD_GUILD_ID}")
 
 
 @bot.event
@@ -226,17 +227,17 @@ async def alwaysonline_command(interaction: discord.Interaction):
     for acc in all_accounts:
         summary_lines.append(f"- [{acc['platform'].upper()}] `{acc['id']}` | _{acc['personality']}_")
 
-    summary_lines.append("Mod always online activ - raspund in sub 1 minut...")
-    await interaction.followup.send("".join(summary_lines))
+    summary_lines.append("\nMod always online activ - raspund in sub 1 minut...")
+    await interaction.followup.send("\n".join(summary_lines))
 
     results = await run_all_accounts(all_accounts, always_online=True)
 
-    result_lines = ["**Rezultate:**"]
+    result_lines = ["\n**Rezultate:**"]
     for r in results:
         status = "OK" if r["success"] else "EROARE"
         result_lines.append(f"- `{r['id']}` [{r['platform']}] -> {status}: {r['detail']}")
 
-    await interaction.followup.send("".join(result_lines))
+    await interaction.followup.send("\n".join(result_lines))
 
 
 @bot.tree.command(
@@ -300,5 +301,6 @@ async def stopdemo_command(interaction: discord.Interaction):
 # Entry point
 # ---------------------------------------------------------------------------
 
-def start_bot():
-    bot.run(DISCORD_TOKEN)
+def create_bot() -> commands.Bot:
+    """Return the bot instance for use with asyncio.run in main.py."""
+    return bot
