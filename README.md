@@ -1,117 +1,148 @@
-# S12T2 - Advanced Chatbot Automation
+<div align="center">
+<pre>
+_____/\\\\\\\\\\\________/\\\____/\\\\\\\\\______/\\\\\\\\\\\\\\\____/\\\\\\\\\_____        
+ ___/\\\/////////\\\__/\\\\\\\__/\\\///////\\\___\///////\\\/////___/\\\///////\\\___       
+  __\//\\\______\///__\/////\\\_\///______\//\\\________\/\\\_______\///______\//\\\__      
+   ___\////\\\_____________\/\\\___________/\\\/_________\/\\\_________________/\\\/___     
+    ______\////\\\__________\/\\\________/\\\//___________\/\\\______________/\\\//_____    
+     _________\////\\\_______\/\\\_____/\\\//______________\/\\\___________/\\\//________   
+      __/\\\______\//\\\______\/\\\___/\\\/_________________\/\\\_________/\\\/___________  
+       _\///\\\\\\\\\\\/_______\/\\\__/\\\\\\\\\\\\\\\_______\/\\\________/\\\\\\\\\\\\\\\_ 
+        ___\///////////_________\///__\///////////////________\///________\///////////////__
+</pre>
+  
+  <h1>Advanced Chatbot Automation</h1>
+  <p>A complex automation system based on Playwright and Discord for intelligent management of Facebook Messenger and Instagram Direct conversations using the Cohere API.</p>
+</div>
 
-Un sistem complex de automatizare bazat pe Playwright si Discord pentru gestionarea inteligenta a conversatiilor de Facebook Messenger si Instagram Direct. Botul foloseste API-ul Cohere pentru a genera raspunsuri contextuale prin intermediul unor personalitati AI customizabile si simuleaza comportamentul uman pentru a evita detectarea.
+---
 
-## Functionalitati Principale
+## 🤖 Features
 
-* Suport Multi-Platforma: Automatizeaza conversatiile atat pe Facebook, cat si pe Instagram.
-* Orchestrare prin Discord: Controleaza intregul sistem direct din Discord prin comenzi tip Slash (/) si preia tintele (ID-urile) din canale dedicate.
-* Comportament Uman Simulat (Anti-Bot):
-  * Include delay-uri realiste de citire si scriere (tastare litera cu litera).
-  * Simuleaza miscari naturale ale mouse-ului si scroll.
-  * Respecta un program zilnic (ex: nu raspunde noaptea, raspunde mai greu dimineata, este foarte activ seara).
-* Memorie si Profilare (SQLite): Botul extrage automat informatii despre persoana cu care vorbeste (nume, varsta, job, status relational, stare emotionala) si le salveaza intr-o baza de date locala (profiles.db). Aceste informatii sunt refolosite pentru a oferi raspunsuri cu un context personalizat.
-* Sesiuni Persistente: Salveaza starea browserului (session_fb.json, session_ig.json) pentru a evita logarile repetate si a ocoli alertele de securitate.
-* Personalitati AI: Raspunsurile sunt generate pe baza unor prompturi de sistem care definesc "personalitatea" botului (ex: prietena afectuoasa, coleg de munca, vorbitor de engleza stalcita).
+- **Multi-Platform Support:** Automates conversations seamlessly across both Facebook and Instagram.
+- **Discord Orchestration:** Control the entire system directly from Discord via Slash (`/`) commands and fetch targets from dedicated text channels.
+- **Human Behavior Simulation:** Bypasses bot detection with realistic reading delays, character-by-character typing, and natural mouse/scroll movements while respecting a daily sleep/activity schedule.
+- **Memory & Profiling:** Automatically extracts and saves user details (name, age, job, relationship status, mood) to a local SQLite database (`profiles.db`) for highly contextualized responses.
+- **AI Personalities:** Responses are driven by system prompts that define the bot's persona (e.g., affectionate friend, coworker, broken English speaker).
+- **Persistent Sessions:** Saves browser states (`session_fb.json`, `session_ig.json`) to bypass repetitive logins and security alerts.
 
-## Structura Proiectului
+## 🚀 Installation
 
-```
-S12T2/
-├── main.py                # Entry point-ul aplicatiei; gestioneaza inchiderea gratioasa a botului
-├── bot/                   # Logica de Discord (evenimente, comenzi slash, sistem de demo, citire canale)
-│   ├── __init__.py        # Initializarea si setarea botului de Discord
-│   ├── channel_reader.py  # Functii pentru citirea ID-urilor tinta din canalele de Discord
-│   ├── commands.py        # Definirea si inregistrarea comenzilor Slash (/run, /test, /demo etc.)
-│   └── demo.py            # Logica pentru gestionarea conversatiilor de test in DM
-├── core/                  # Orchestrarea fluxului (verificare program, cohere, update db, runner)
-│   ├── __init__.py        # Expunerea functiilor principale din modul
-│   ├── activity.py        # Logica pentru simularea programului zilnic si delay-urilor umane
-│   ├── cohere_client.py   # Functii pentru interogarea API-ului Cohere (generare raspunsuri si extragere profil)
-│   ├── profile_db.py      # Baza de date SQLite pentru memoria/profilul utilizatorilor contactati
-│   └── runner.py          # Bucla de orchestrare: citire conversatie -> generare raspuns -> trimitere
-├── browser/               # Automatizarea Playwright (login, bypass cookie-uri/popup-uri, interactiune DOM)
-│   ├── __init__.py        # Expunerea claselor de browser
-│   ├── actions.py         # Functii pentru simularea actiunilor umane (scroll, miscare mouse, typing delay)
-│   ├── facebook.py        # Logica specifica de automatizare pentru platforma Facebook Messenger
-│   ├── instagram.py       # Logica specifica de automatizare pentru platforma Instagram Direct
-│   ├── popups.py          # Functii destinate inchiderii dialogurilor (cookies, conectare, PIN e2ee)
-│   └── session.py         # Gestionarea instantelor si contextelor de Chromium (salvare/incarcare sesiune)
-├── logger.py              # Sistemul de logging pentru consola si fisiere locale
-├── personalities.py       # Dictionarul cu personalitatile AI disponibile (prompturile sistemului)
-├── config.py              # Incarcarea variabilelor de mediu din fisierele .env
-├── requirements.txt       # Dependentele proiectului (ex: discord.py, playwright, httpx, cohere etc.)
-├── .env.example           # Exemplu de configurare a variabilelor de mediu
-├── .gitignore             # Specificarea fisierelor ignorate de Git (sesiuni, log-uri, venv)
-└── README.md              # Documentatia proiectului cu instructiuni de instalare si folosire
-```
+1. Install the required Python dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+2. Install the necessary Playwright browsers:
+   ```bash
+   playwright install chromium
+   ```
+3. Set up your environment variables by copying the template:
+   ```bash
+   cp .env.example .env
+   ```
 
-## Instalare si Configurare
+> **Note:** Ensure you fill out the `.env` file with your Discord token, Cohere API key, and social media credentials before running the bot.
 
-1. Instaleaza dependentele:
-```bash
-pip install -r requirements.txt
-```
+## 💻 Usage
 
-2. Instaleaza browserele pentru Playwright:
-```bash
-playwright install chromium
-```
-
-3. Configureaza variabilele de mediu:
-```bash
-cp .env.example .env
-```
-Asigura-te ca ai completat token-ul Discord, cheia API Cohere si credentialele pentru conturile de Facebook si Instagram.
-
-## Rulare
+Start the main entry point to initialize the bot and launch the Discord listener:
 
 ```bash
 python main.py
 ```
 
-## Configurare Discord
+*Once online, use your designated Discord channels (`facebook-ids` and `instagram-ids`) to feed target IDs to the bot. Add one ID per line, optionally followed by the desired persona separated by a `|`.*
 
-### 1. Canale Necesare
-
-Botul citeste ID-urile conturilor tinta din canale specifice. Trebuie sa ai urmatoarele canale in serverul tau de Discord (numele pot fi modificate din .env):
-
-* `facebook-ids` - Pentru tintele de Facebook Messenger.
-* `instagram-ids` - Pentru tintele de Instagram Direct.
-
-### 2. Formatul Tintelor in Canale
-
-Adauga un ID pe linie, urmat optional de personalitatea dorita, separate prin `|`. Liniile care incep cu `#` sunt ignorate.
-
-```
+**Target Channel Example:**
+```text
 987654321 | amic
 123456789 | iubita
 111222333 | englez_stalcit
-444555666              # Foloseste personalitatea default (iubita)
+444555666              # Lines without a persona use the default
 ```
 
-## Comenzi Discord Disponibile
+## 👾 Discord Commands
 
-| Comanda | Descriere |
-|---|---|
-| `/run` | Porneste fluxul normal de procesare pentru toate ID-urile din canale. Respecta programul uman. |
-| `/alwaysonline` | Porneste botul ignorand programul de somn/activitate. Va raspunde in sub 1 minut. |
-| `/test <platform> <id> [personalitate]` | Ruleaza botul strict pentru un singur cont. Util pentru debugging. |
-| `/personalitati` | Afiseaza o lista cu toate personalitatile definite in cod. |
-| `/demo [personalitate]` | Porneste o sesiune de test direct in DM cu botul pe Discord. |
-| `/stopdemo` | Opreste sesiunea activa de demo din DM. |
+Control the bot directly from your Discord server using the following Slash commands:
 
-## Adaugare Personalitate Noua
+| Command | Action | Description |
+|---------------|--------|-------------|
+| `/run`  | **Start Flow** | Starts the normal processing flow for all IDs, respecting the human-like schedule. |
+| `/alwaysonline`  | **Force Active** | Ignores the sleep/activity schedule and responds to all messages in under 1 minute. |
+| `/test <platform> <id>`  | **Debug Target** | Runs the bot strictly for a single account. Great for debugging. |
+| `/personalitati`  | **List Personas** | Displays a list of all available AI personalities defined in the code. |
+| `/demo [persona]`  | **Test in DM** | Starts a simulated test session directly in your Discord DMs. |
+| `/stopdemo`  | **End Test** | Stops the active DM demo session. |
 
-Editeaza fisierul `personalities.py` si adauga o intrare noua in dictionarul `PERSONALITIES`:
+## ⚙️ Configuration Options
 
-```python
-"antrenor": {
-    "name": "Antrenor de Fitness",
-    "prompt": "Esti un antrenor de fitness foarte motivat. Folosesti expresii precum 'Hai trage!', 'Fara scuze!'. Raspunzi la mesaje scurt si la obiect, punand accent pe disciplina."
-}
-```
+Customize your bot's behavior by editing the following core files:
 
-## Disclaimer
+| Option | Description |
+|--------|-------------|
+| **`.env` Settings** | Configure your Discord Token, Cohere API Key, Facebook/Instagram credentials, and the exact names of your target Discord channels. |
+| **`personalities.py`** | Add new personas to the `PERSONALITIES` dictionary by defining a `name` and a `prompt` (e.g., "Fitness Coach: You respond with short, motivational fitness quotes"). |
+| **`profiles.db`** | The local SQLite database where all extracted contextual data for your targets is stored and managed. |
 
-Acest proiect este realizat exclusiv in scop de educatie si divertisment. Automatizarea conturilor de utilizator pe platforme precum Facebook si Instagram poate incalca Termenii si Conditiile (ToS) ale acestora si poate duce la restrictionarea sau suspendarea conturilor. Nu trebuie luat in serios si nu trebuie sa inlocuiasca interactiunile umane autentice.
+## 🚨 Requirements
+
+- Python 3.8+
+- `discord.py`, `playwright`, `httpx`, `cohere`
+- Active Discord Bot Token & Server
+- Cohere API Key
+- Valid Facebook and Instagram accounts
+
+> **Disclaimer:** This project is for educational and entertainment purposes only. Automating user accounts on platforms like Facebook and Instagram may violate their Terms of Service (ToS) and result in account suspension. Use responsibly.
+
+---
+---
+---
+
+<div align="center">
+<pre>
+   ...     ..      ..          ..                    ....                ..      .     
+ x*8888x.:*8888: -"888:     :**888H: `: .xH""      .xH888888Hx.          x88f` `..x88. .> 
+ X   48888X `8888H  8888     X   `8888k XX888      .H8888888888888:      :8888   xf`*8888%  
+X8x.  8888X  8888X  !888>  '8hx  48888 ?8888      888*"""?""*88888X    :8888f .888  `"`   
+X8888 X8888  88888   "*8%- '8888 '8888 `8888     'f     d8x.   ^%88k  88888' X8888. >"8x  
+'*888!X8888> X8888  xH8>    %888>'8888  8888    '>    <88888X   '?8  88888  ?88888< 888> 
+  `?8 `8888  X888X X888>     "8 '888"  8888      `:..:`888888>    8> 88888   "88888 "8%  
+  -^  '888"  X888  8888>     .-` X*"    8888            `"*88      X  88888 '  `8888>     
+   dx '88~x. !88~  8888>       .xhx.    8888       .xHHhx.."      !  `8888> %  X88!     
+ .8888Xf.888x:!    X888X.:   .H88888h.~`8888.>    X88888888hx. ..!    `888X  `~""`   :   
+:""888":~"888"     `888*"   .~  `%88!` '888*~    !   "*888888888"        "88k.      .~   
+   "~'   "~         ""            `"     ""            ^"***"`            `""*==~~`     
+  
+</pre>
+<pre>
+     ...     ..                                 
+  =*8888x <"?88h.       .xnnx.  .xx.    
+ X>  '8888H> '8888    .f``"888X< `888.  
+'88h. `8888   8888    8L   8888X  8888  
+'8888 '8888    "88>  X88h. `8888  X888k 
+ `888 '8888.xH888x.  '8888 '8888  X8888 
+   X" :88*~  `*8888>  `*88>'8888  X8888 
+ ~"   !"`      "888>    `! X888~  X8888 
+  .H8888h.       ?88    -`  X*"    X8888 
+ :"^"88888h.    '!      xH88hx  . X8888 
+ ^    "88888hx.+"     .*"*88888~  X888X 
+        ^"**""        `    "8%    X888> 
+                         .x..     888f  
+                        88888    :88f   
+                        "88*"  .x8*~    
+
+</pre>
+<pre>
+        ....        .        ..                    ...     ..                  
+   .x88" `^x~  xH(`     :**888H: `: .xH""    =*8888x <"?88h.         oe    
+  X888   x8 ` 8888h    X   `8888k XX888      X>  '8888H> '8888        .@88    
+ 88888  888.  %8888   '8hx  48888 ?8888    '88h. `8888   8888   ==*88888    
+<8888X X8888   X8?    '8888 '8888 `8888    '8888 '8888    "88>     88888    
+X8888> 488888>"8888x   %888>'8888  8888     `888 '8888.xH888x.     88888    
+X8888>  888888 '8888L    "8 '888"  8888       X" :88*~  `*8888>    88888    
+?8888X   ?8888>'8888X   .-` X*"    8888     ~"   !"`      "888>    88888    
+ 8888X h  8888 '8888~     .xhx.    8888      .H8888h.       ?88     88888    
+  ?888  -:8*"  <888"    .H88888h.~`8888.>   :"^"88888h.    '!      88888    
+   `*88.      :88%     .~  `%88!` '888*~    ^    "88888hx.+"       88888    
+      ^"~====""`             `"     ""            ^"**""        '**%%%%%%** </pre>
+</div>
