@@ -27,7 +27,6 @@
     <Content Include="profiles.db" />
     <Content Include="README.md" />
     <Content Include="requirements.txt" />
-    <Content Include="session_fb.json" />
     <Content Include="session_ig.json" />
   </ItemGroup>
   <ItemGroup>

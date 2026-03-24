@@ -13,7 +13,6 @@ from logger import log
 
 guild = discord.Object(id=DISCORD_GUILD_ID)
 
-
 _watch_task: asyncio.Task | None = None
 
 
@@ -24,7 +23,7 @@ def setup(bot: commands.Bot):
     async def on_ready():
         init_db()
         await bot.tree.sync(guild=guild)
-        log.info(f"[BOT] Logat ca {bot.user} | Guild: {DISCORD_GUILD_ID}")
+        log.info(f"[BOT] Logged in as {bot.user} | Guild: {DISCORD_GUILD_ID}")
 
     @bot.event
     async def on_message(message: discord.Message):
@@ -36,7 +35,7 @@ def setup(bot: commands.Bot):
 
     @bot.tree.command(
         name="slowreader",
-        description="Porneste botul pentru toate conturile din canale.",
+        description="Starts the bot for all accounts found in the pending channels.",
         guild=guild,
     )
     async def slowreader_command(interaction: discord.Interaction):
@@ -48,26 +47,26 @@ def setup(bot: commands.Bot):
 
         if not all_accounts:
             await interaction.followup.send(
-                f"Nu am gasit niciun cont. Adauga ID-uri in `#{CHANNEL_FACEBOOK_IDS}` sau `#{CHANNEL_INSTAGRAM_IDS}`."
+                f"No accounts found. Please add IDs in `#{CHANNEL_FACEBOOK_IDS}` or `#{CHANNEL_INSTAGRAM_IDS}`."
             )
             return
 
-        lines = [f"**Conturi gasite:** {len(all_accounts)}"]
+        lines = [f"**Accounts found:** {len(all_accounts)}"]
         for acc in all_accounts:
             lines.append(f"- [{acc['platform'].upper()}] `{acc['id']}` | _{acc['personality']}_")
-        lines.append("\nPornesc procesarea...")
+        lines.append("\nStarting processing...")
         await interaction.followup.send("\n".join(lines))
 
         results = await run_all_accounts(all_accounts)
-        result_lines = ["\n**Rezultate:**"]
+        result_lines = ["\n**Results:**"]
         for r in results:
-            status = "OK" if r["success"] else "EROARE"
+            status = "OK" if r["success"] else "ERROR"
             result_lines.append(f"- `{r['id']}` [{r['platform']}] -> {status}: {r['detail']}")
         await interaction.followup.send("\n".join(result_lines))
 
     @bot.tree.command(
         name="alwaysonline",
-        description="Ruleaza botul in mod always online - raspunde in sub 1 minut.",
+        description="Runs the bot in always online mode - replies in under 1 minute.",
         guild=guild,
     )
     async def alwaysonline_command(interaction: discord.Interaction):
@@ -78,31 +77,31 @@ def setup(bot: commands.Bot):
         all_accounts = fb_accounts + ig_accounts
 
         if not all_accounts:
-            await interaction.followup.send("Nu am gasit niciun cont in canale.")
+            await interaction.followup.send("No accounts found in channels.")
             return
 
-        lines = [f"**[ALWAYS ONLINE] Conturi gasite:** {len(all_accounts)}"]
+        lines = [f"**[ALWAYS ONLINE] Accounts found:** {len(all_accounts)}"]
         for acc in all_accounts:
             lines.append(f"- [{acc['platform'].upper()}] `{acc['id']}` | _{acc['personality']}_")
-        lines.append("\nMod always online activ - raspund in sub 1 minut...")
+        lines.append("\nAlways online mode active - replying in under 1 minute...")
         await interaction.followup.send("\n".join(lines))
 
         results = await run_all_accounts(all_accounts, always_online=True)
-        result_lines = ["\n**Rezultate:**"]
+        result_lines = ["\n**Results:**"]
         for r in results:
-            status = "OK" if r["success"] else "EROARE"
+            status = "OK" if r["success"] else "ERROR"
             result_lines.append(f"- `{r['id']}` [{r['platform']}] -> {status}: {r['detail']}")
         await interaction.followup.send("\n".join(result_lines))
 
     @bot.tree.command(
         name="test",
-        description="Testeaza un singur cont.",
+        description="Tests a single specific account.",
         guild=guild,
     )
     @app_commands.describe(
-        platform="facebook sau instagram",
-        account_id="ID-ul contului",
-        personality="Personalitatea de folosit (default: iubita)",
+        platform="facebook or instagram",
+        account_id="The account ID",
+        personality="The personality to use (default: iubita)",
     )
     async def test_command(
         interaction: discord.Interaction,
@@ -115,51 +114,51 @@ def setup(bot: commands.Bot):
             [{"id": account_id, "platform": platform, "personality": personality}]
         )
         r = results[0]
-        status = "OK" if r["success"] else "EROARE"
+        status = "OK" if r["success"] else "ERROR"
         await interaction.followup.send(
             f"[{platform.upper()}] `{account_id}` | _{personality}_ -> **{status}**: {r['detail']}"
         )
 
     @bot.tree.command(
-        name="personalitati",
-        description="Afiseaza lista de personalitati disponibile.",
+        name="personalities",
+        description="Displays the list of available personalities.",
         guild=guild,
     )
-    async def personalitati_command(interaction: discord.Interaction):
+    async def personalities_command(interaction: discord.Interaction):
         names = list_personalities()
-        lines = ["**Personalitati disponibile:**"]
+        lines = ["**Available personalities:**"]
         for name in names:
             lines.append(f"- `{name}`")
-        lines.append("\nFoloseste formatul `<id> | <personalitate>` in canale.")
+        lines.append("\nUse the format `<id> | <personality>` in the target channels.")
         await interaction.response.send_message("\n".join(lines))
 
     @bot.tree.command(
         name="demo",
-        description="Porneste o conversatie de test in DM cu botul.",
+        description="Starts a test conversation in DM with the bot.",
         guild=guild,
     )
-    @app_commands.describe(personality="Personalitatea de folosit (default: iubita)")
+    @app_commands.describe(personality="The personality to use (default: iubita)")
     async def demo_command(interaction: discord.Interaction, personality: str = "iubita"):
         user_id = interaction.user.id
         p = get_personality(personality)
         demo_module.start_session(user_id, personality)
 
         await interaction.response.send_message(
-            f"Sesiune demo pornita cu personalitatea **{p['name']}**.\n"
-            "Ti-am trimis un DM - scrie acolo pentru a conversa.\n"
-            "Foloseste `/stopdemo` pentru a opri.",
+            f"Demo session started using the **{p['name']}** personality.\n"
+            "I sent you a DM - write there to start the conversation.\n"
+            "Use `/stopdemo` to stop.",
             ephemeral=True,
         )
         dm = await interaction.user.create_dm()
-        await dm.send(f"Salut! Sunt **{p['name']}**. Scrie-mi orice! 👋")
+        await dm.send(f"Hi! I'm **{p['name']}**. Text me anything! 👋")
 
     @bot.tree.command(
         name="run",
-        description="Porneste modul de ascultare automata - raspunde instant la mesaje noi.",
+        description="Starts the global auto-listening mode - replies instantly to new messages.",
         guild=guild,
     )
     @app_commands.describe(
-        mod="alwaysonline = raspunde instant (sub 1 min) | normal = respecta programul de activitate"
+        mod="alwaysonline = replies instantly | normal = respects the activity schedule"
     )
     @app_commands.choices(mod=[
         app_commands.Choice(name="alwaysonline", value="alwaysonline"),
@@ -167,28 +166,19 @@ def setup(bot: commands.Bot):
     ])
     async def run_command(interaction: discord.Interaction, mod: str = "alwaysonline"):
         await interaction.response.defer(thinking=True)
-        guild_obj = bot.get_guild(DISCORD_GUILD_ID)
-        fb_accounts = await read_ids_from_channel(guild_obj, CHANNEL_FACEBOOK_IDS)
-        ig_accounts = await read_ids_from_channel(guild_obj, CHANNEL_INSTAGRAM_IDS)
-        all_accounts = fb_accounts + ig_accounts
-
-        if not all_accounts:
-            await interaction.followup.send("Nu am gasit niciun cont in canale.")
-            return
-
         always_online = mod == "alwaysonline"
-        mod_label = "Always Online" if always_online else "Normal (respecta programul)"
+        mod_label = "Always Online" if always_online else "Normal (Respects schedule)"
 
         await interaction.followup.send(
-            f"**Watch mode pornit** pentru {len(all_accounts)} conturi.\n"
-            f"Mod: **{mod_label}**\n"
-            "Voi raspunde automat la orice mesaj nou."
+            f"**Global Watch mode started.**\n"
+            f"Mode: **{mod_label}**\n"
+            "I will automatically reply to any new messages."
         )
         async def run_watch():
             try:
-                await auto_watch_loop(all_accounts, always_online=always_online)
+                await auto_watch_loop(always_online=always_online)
             except Exception as e:
-                log.error(f"[WATCH] Eroare in watch loop: {e}")
+                log.error(f"[WATCH] Error in watch loop: {e}")
                 import traceback
                 log.error(traceback.format_exc())
 
@@ -197,7 +187,7 @@ def setup(bot: commands.Bot):
 
     @bot.tree.command(
         name="stop",
-        description="Opreste modul de ascultare automata.",
+        description="Stops the auto-listening mode.",
         guild=guild,
     )
     async def stop_command(interaction: discord.Interaction):
@@ -207,23 +197,23 @@ def setup(bot: commands.Bot):
             _watch_task = None
             from core.runner import cleanup
             await cleanup()
-            await interaction.response.send_message("Watch mode oprit.", ephemeral=True)
+            await interaction.response.send_message("Watch mode stopped.", ephemeral=True)
         else:
-            await interaction.response.send_message("Nu exista niciun watch mode activ.", ephemeral=True)
+            await interaction.response.send_message("There is no active watch mode.", ephemeral=True)
 
     @bot.tree.command(
         name="stopdemo",
-        description="Opreste sesiunea demo activa.",
+        description="Stops the active demo session.",
         guild=guild,
     )
     async def stopdemo_command(interaction: discord.Interaction):
         if demo_module.stop_session(interaction.user.id):
             await interaction.response.send_message(
-                "Sesiune demo oprita. Profilul tau de test a fost salvat.",
+                "Demo session stopped. Your test profile was saved.",
                 ephemeral=True,
             )
         else:
             await interaction.response.send_message(
-                "Nu ai nicio sesiune demo activa.",
+                "You do not have any active demo session.",
                 ephemeral=True,
             )

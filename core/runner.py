@@ -8,7 +8,6 @@ from logger import log
 
 _session: BrowserSession | None = None
 
-
 async def _get_session(platform: str) -> BrowserSession:
     global _session
     if _session is None:
@@ -22,7 +21,6 @@ async def _get_session(platform: str) -> BrowserSession:
 
     return _session
 
-
 async def _process_account(session: BrowserSession, account: dict, always_online: bool = False) -> dict:
     platform = account["platform"].lower()
     account_id = account["id"]
@@ -32,72 +30,72 @@ async def _process_account(session: BrowserSession, account: dict, always_online
 
     try:
         if not should_respond(always_online=always_online):
-            log.info(f"[RUNNER] {account_id} - in afara programului, skip.")
+            log.info(f"[RUNNER] {account_id} - outside schedule, skip.")
             result["success"] = True
-            result["detail"] = "In afara programului de activitate."
+            result["detail"] = "Outside activity schedule."
             return result
 
-        log.info(f"[RUNNER] {account_id} - citesc conversatia...")
+        log.info(f"[RUNNER] {account_id} - reading conversation...")
         if platform == "facebook":
             history = await session.facebook.get_conversation(account_id)
         elif platform == "instagram":
             history = await session.instagram.get_conversation(account_id)
         else:
-            result["detail"] = f"Platform necunoscuta: {platform}"
+            result["detail"] = f"Unknown platform: {platform}"
             return result
 
         if not history:
-            log.info(f"[RUNNER] {account_id} - niciun mesaj gasit.")
-            result["detail"] = "Nu am gasit mesaje in conversatie."
+            log.info(f"[RUNNER] {account_id} - no messages found.")
+            result["detail"] = "No messages found in conversation."
             return result
 
         if history[-1]["role"] == "CHATBOT":
-            log.info(f"[RUNNER] {account_id} - ultimul mesaj e al nostru, asteptam raspuns.")
+            log.info(f"[RUNNER] {account_id} - last message is ours, waiting for reply.")
             result["success"] = True
-            result["detail"] = "Ultimul mesaj este al nostru."
+            result["detail"] = "Last message is ours."
             return result
 
         profile = get_profile(account_id, platform)
         profile_context = profile_to_context(profile)
 
         last_incoming = history[-1]["message"]
-        log.info(f"[RUNNER] {account_id} - mesaj primit: \"{last_incoming[:60]}\"")
+        log.info(f"[RUNNER] {account_id} - received message: \"{last_incoming[:60]}\"")
 
         await activity_delay(always_online=always_online)
 
-        log.info(f"[RUNNER] {account_id} - generez raspunsul...")
+        log.info(f"[RUNNER] {account_id} - generating reply...")
         reply = await generate_reply(history, personality_key=personality, profile_context=profile_context)
         if not reply:
-            result["detail"] = "Cohere nu a returnat un raspuns."
+            result["detail"] = "Cohere did not return a response."
             return result
 
-        log.info(f"[RUNNER] {account_id} - trimit: \"{reply[:60]}\"")
+        log.info(f"[RUNNER] {account_id} - sending: \"{reply[:60]}\"")
 
         if platform == "facebook":
             await session.facebook.send_message(account_id, reply, last_incoming=last_incoming)
         elif platform == "instagram":
             await session.instagram.send_message(account_id, reply, last_incoming=last_incoming)
 
-        log.info(f"[RUNNER] {account_id} - mesaj trimis cu succes.")
+        log.info(f"[RUNNER] {account_id} - message sent successfully.")
 
         new_data = await extract_profile_data(history)
         if new_data:
             update_profile(account_id, platform, new_data)
 
         result["success"] = True
-        result["detail"] = f"Trimis: {reply[:60]}..."
+        result["detail"] = f"Sent: {reply[:60]}..."
 
     except Exception as e:
-        log.error(f"[RUNNER] {account_id} - eroare: {e}")
+        log.error(f"[RUNNER] {account_id} - error: {e}")
         result["detail"] = str(e)
 
     return result
 
-
 async def run_all_accounts(accounts: list[dict], always_online: bool = False) -> list[dict]:
+    """Processes a specific list of accounts sequentially."""
     results = []
     mode = "ALWAYS ONLINE" if always_online else "NORMAL"
-    log.info(f"[RUNNER] Pornesc procesarea a {len(accounts)} conturi - mod {mode}")
+    log.info(f"[RUNNER] Starting processing for {len(accounts)} accounts - mode {mode}")
 
     for account in accounts:
         log.info(f"[RUNNER] --- {account['platform'].upper()} | {account['id']} | {account.get('personality')} ---")
@@ -106,44 +104,35 @@ async def run_all_accounts(accounts: list[dict], always_online: bool = False) ->
         results.append(result)
         await asyncio.sleep(random.uniform(2, 5))
 
-    log.info("[RUNNER] Procesare completa.")
+    log.info("[RUNNER] Processing complete.")
     return results
 
-
-async def auto_watch_loop(accounts: list[dict], always_online: bool = True):
+async def auto_watch_loop(always_online: bool = True):
     """
-    Start inbox watchers and process new messages as they arrive.
-    Runs indefinitely until cancelled.
-    accounts: list of dicts with id, platform, personality
+    Start inbox watchers and process new messages as they arrive globally.
     """
-    # Build a lookup: platform+id -> personality
-    account_map = {
-        f"{acc['platform']}:{acc['id']}": acc.get("personality", "iubita")
-        for acc in accounts
-    }
-
-    # Initialize sessions for all needed platforms
-    platforms = set(acc["platform"] for acc in accounts)
-    for platform in platforms:
-        session = await _get_session(platform)
+    global _session
+    
+    # Initialize sessions for both platforms
+    await _get_session("facebook")
+    await _get_session("instagram")
 
     await _session.start_watching()
-    log.info("[WATCHER] Auto-watch pornit. Ascult pentru mesaje noi...")
+    log.info("[WATCHER] Auto-watch started. Listening for new messages...")
 
     while True:
         event = await _session.watcher.next_event()
         platform = event["platform"]
         conv_id = event["id"]
 
-        key = f"{platform}:{conv_id}"
-        personality = account_map.get(key, "iubita")
+        # Default personality for incoming unknown IDs
+        personality = "iubita"
 
         account = {"id": conv_id, "platform": platform, "personality": personality}
-        log.info(f"[WATCHER] Procesez {platform} | {conv_id} | {personality}")
+        log.info(f"[WATCHER] Processing {platform} | {conv_id} | {personality}")
 
         session = await _get_session(platform)
         await _process_account(session, account, always_online=always_online)
-
 
 async def cleanup():
     global _session
