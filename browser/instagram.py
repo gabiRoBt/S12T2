@@ -4,7 +4,7 @@ import urllib.parse
 from playwright.async_api import Page, BrowserContext
 
 from config import IG_USERNAME, IG_PASSWORD, BROWSER_TIMEOUT, CONTEXT_MESSAGE_LIMIT
-from browser.helpers import human_delay, human_mouse_move, human_scroll, reading_delay, js_click, type_into, OUTGOING_COLOR_JS
+from browser.actions import human_delay, human_mouse_move, human_scroll, reading_delay, js_click, type_into, OUTGOING_COLOR_JS
 from browser.popups import accept_cookies, dismiss_popups, dismiss_ig_connect_prompt
 from logger import log
 

@@ -1,16 +1,20 @@
+import asyncio
 import discord
 from discord import app_commands
 from discord.ext import commands
 
 from config import DISCORD_GUILD_ID, CHANNEL_FACEBOOK_IDS, CHANNEL_INSTAGRAM_IDS
 from personalities import list_personalities, get_personality
-from core.runner import run_all_accounts
-from bot.helpers import read_ids_from_channel
+from core.runner import run_all_accounts, auto_watch_loop
+from bot.channel_reader import read_ids_from_channel
 from bot import demo as demo_module
 from core.profile_db import init_db
 from logger import log
 
 guild = discord.Object(id=DISCORD_GUILD_ID)
+
+
+_watch_task: asyncio.Task | None = None
 
 
 def setup(bot: commands.Bot):
@@ -31,11 +35,11 @@ def setup(bot: commands.Bot):
         await bot.process_commands(message)
 
     @bot.tree.command(
-        name="run",
+        name="slowreader",
         description="Porneste botul pentru toate conturile din canale.",
         guild=guild,
     )
-    async def run_command(interaction: discord.Interaction):
+    async def slowreader_command(interaction: discord.Interaction):
         await interaction.response.defer(thinking=True)
         guild_obj = bot.get_guild(DISCORD_GUILD_ID)
         fb_accounts = await read_ids_from_channel(guild_obj, CHANNEL_FACEBOOK_IDS)
@@ -148,6 +152,64 @@ def setup(bot: commands.Bot):
         )
         dm = await interaction.user.create_dm()
         await dm.send(f"Salut! Sunt **{p['name']}**. Scrie-mi orice! 👋")
+
+    @bot.tree.command(
+        name="run",
+        description="Porneste modul de ascultare automata - raspunde instant la mesaje noi.",
+        guild=guild,
+    )
+    @app_commands.describe(
+        mod="alwaysonline = raspunde instant (sub 1 min) | normal = respecta programul de activitate"
+    )
+    @app_commands.choices(mod=[
+        app_commands.Choice(name="alwaysonline", value="alwaysonline"),
+        app_commands.Choice(name="normal", value="normal"),
+    ])
+    async def run_command(interaction: discord.Interaction, mod: str = "alwaysonline"):
+        await interaction.response.defer(thinking=True)
+        guild_obj = bot.get_guild(DISCORD_GUILD_ID)
+        fb_accounts = await read_ids_from_channel(guild_obj, CHANNEL_FACEBOOK_IDS)
+        ig_accounts = await read_ids_from_channel(guild_obj, CHANNEL_INSTAGRAM_IDS)
+        all_accounts = fb_accounts + ig_accounts
+
+        if not all_accounts:
+            await interaction.followup.send("Nu am gasit niciun cont in canale.")
+            return
+
+        always_online = mod == "alwaysonline"
+        mod_label = "Always Online" if always_online else "Normal (respecta programul)"
+
+        await interaction.followup.send(
+            f"**Watch mode pornit** pentru {len(all_accounts)} conturi.\n"
+            f"Mod: **{mod_label}**\n"
+            "Voi raspunde automat la orice mesaj nou."
+        )
+        async def run_watch():
+            try:
+                await auto_watch_loop(all_accounts, always_online=always_online)
+            except Exception as e:
+                log.error(f"[WATCH] Eroare in watch loop: {e}")
+                import traceback
+                log.error(traceback.format_exc())
+
+        global _watch_task
+        _watch_task = asyncio.create_task(run_watch())
+
+    @bot.tree.command(
+        name="stop",
+        description="Opreste modul de ascultare automata.",
+        guild=guild,
+    )
+    async def stop_command(interaction: discord.Interaction):
+        global _watch_task
+        if _watch_task and not _watch_task.done():
+            _watch_task.cancel()
+            _watch_task = None
+            from core.runner import cleanup
+            await cleanup()
+            await interaction.response.send_message("Watch mode oprit.", ephemeral=True)
+        else:
+            await interaction.response.send_message("Nu exista niciun watch mode activ.", ephemeral=True)
 
     @bot.tree.command(
         name="stopdemo",

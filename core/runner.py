@@ -110,6 +110,41 @@ async def run_all_accounts(accounts: list[dict], always_online: bool = False) ->
     return results
 
 
+async def auto_watch_loop(accounts: list[dict], always_online: bool = True):
+    """
+    Start inbox watchers and process new messages as they arrive.
+    Runs indefinitely until cancelled.
+    accounts: list of dicts with id, platform, personality
+    """
+    # Build a lookup: platform+id -> personality
+    account_map = {
+        f"{acc['platform']}:{acc['id']}": acc.get("personality", "iubita")
+        for acc in accounts
+    }
+
+    # Initialize sessions for all needed platforms
+    platforms = set(acc["platform"] for acc in accounts)
+    for platform in platforms:
+        session = await _get_session(platform)
+
+    await _session.start_watching()
+    log.info("[WATCHER] Auto-watch pornit. Ascult pentru mesaje noi...")
+
+    while True:
+        event = await _session.watcher.next_event()
+        platform = event["platform"]
+        conv_id = event["id"]
+
+        key = f"{platform}:{conv_id}"
+        personality = account_map.get(key, "iubita")
+
+        account = {"id": conv_id, "platform": platform, "personality": personality}
+        log.info(f"[WATCHER] Procesez {platform} | {conv_id} | {personality}")
+
+        session = await _get_session(platform)
+        await _process_account(session, account, always_online=always_online)
+
+
 async def cleanup():
     global _session
     if _session:

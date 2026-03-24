@@ -1,5 +1,5 @@
 from playwright.async_api import Page
-from browser.helpers import js_click, human_delay
+from browser.actions import js_click, human_delay
 from logger import log
 
 
@@ -52,7 +52,7 @@ async def handle_fb_pin(page: Page):
             await page.evaluate("el => { el.focus(); el.click(); }", pin_input)
             await page.keyboard.type("123456")
             await page.keyboard.press("Enter")
-            from browser.helpers import human_delay as hd
+            from browser.actions import human_delay as hd
             await hd(0.8, 1.5)
             log.info("[FB] PIN introdus.")
     except Exception:

@@ -3,6 +3,7 @@ from bot import create_bot
 from core.runner import cleanup
 from config import DISCORD_TOKEN
 from logger import log
+from browser.actions import js_click, human_delay
 
 
 async def main():

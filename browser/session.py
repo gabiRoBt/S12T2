@@ -4,6 +4,7 @@ from playwright.async_api import async_playwright, Browser, BrowserContext
 from config import HEADLESS
 from browser.facebook import FacebookBrowser, FB_SESSION_PATH
 from browser.instagram import InstagramBrowser, IG_SESSION_PATH
+from browser.watcher import InboxWatcher
 from logger import log
 
 
@@ -15,6 +16,7 @@ class BrowserSession:
         self._ig_context: BrowserContext | None = None
         self.facebook: FacebookBrowser | None = None
         self.instagram: InstagramBrowser | None = None
+        self.watcher: InboxWatcher | None = None
 
     async def start(self):
         self.playwright = await async_playwright().start()
@@ -22,6 +24,7 @@ class BrowserSession:
             headless=HEADLESS,
             args=["--disable-blink-features=AutomationControlled"],
         )
+        self.watcher = InboxWatcher()
         log.info("[BROWSER] Browser pornit.")
 
     async def _new_context(self, session_path: str | None = None) -> BrowserContext:
@@ -51,7 +54,16 @@ class BrowserSession:
             self.instagram = InstagramBrowser(self._ig_context)
             log.info("[IG] Context Instagram creat.")
 
+    async def start_watching(self):
+        """Start inbox watchers for all initialized platforms."""
+        if self.facebook and self._fb_context:
+            await self.watcher.start_facebook(self._fb_context, self.facebook)
+        if self.instagram and self._ig_context:
+            await self.watcher.start_instagram(self._ig_context, self.instagram)
+
     async def stop(self):
+        if self.watcher:
+            await self.watcher.stop()
         if self._fb_context:
             try:
                 await self._fb_context.storage_state(path=FB_SESSION_PATH)

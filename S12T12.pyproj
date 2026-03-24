@@ -40,6 +40,7 @@
     <Compile Include="browser\instagram.py" />
     <Compile Include="browser\popups.py" />
     <Compile Include="browser\session.py" />
+    <Compile Include="browser\watcher.py" />
     <Compile Include="browser\__init__.py" />
     <Compile Include="config.py" />
     <Compile Include="core\activity.py" />
